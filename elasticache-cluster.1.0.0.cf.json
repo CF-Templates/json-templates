@@ -1,0 +1,56 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  
+  "Description" : "AWS CloudFormation Sample Template ElastiCache: Sample template showing how to create an Amazon ElastiCache Cache Cluster with Auto Discovery and access it from a very simple PHP application. **WARNING** This template creates an Amazon Ec2 Instance and an Amazon ElastiCache Cluster. You will be billed for the AWS resources used if you create a stack from this template.",
+  
+  "Parameters" : {
+    "ClusterName" : {
+      "Description" : "A name for the cache cluster.",
+      "Type" : "String"
+    },
+    "CacheNodeType" : {
+      "Default" : "cache.m1.small",
+      "Description" : "The compute and memory capacity of the nodes in the Cache Cluster",
+      "Type" : "String"
+    },
+    "NumCacheNodes" : {
+      "Default": "1",
+      "Description" : "The number of Cache Nodes the Cache Cluster should have",
+      "Type": "Number",
+      "MinValue": "1",
+      "MaxValue": "10",
+      "ConstraintDescription" : "must be between 1 and 10."
+    },
+    "Engine" : {
+      "Description" : "The name of the cache engine to be used for this cache cluster, such as memcached or redis.",
+      "Type" : "String"
+    },
+    "CacheSubnetGroupName" : {
+      "Description" : "The cache subnet group that you associate with a cache cluster.",
+      "Type" : "String"
+    },
+    "VpcSecurityGroupIds" : {
+      "Description" : "The compute and memory capacity of the nodes in the Cache Cluster",
+      "Type" : "String"
+    }
+  },
+  
+  "Mappings" : {
+  },
+    
+  "Resources" : {   
+    "CacheCluster" : {
+      "Type": "AWS::ElastiCache::CacheCluster",
+      "Properties": {
+        "ClusterName"             : { "Ref" : "ClusterName" },       
+        "CacheNodeType"           : { "Ref" : "CacheNodeType" },
+        "VpcSecurityGroupIds"     : [ { "Ref" : "VpcSecurityGroupIds" } ],
+        "CacheSubnetGroupName"    : { "Ref" : "CacheSubnetGroupName" },
+        "Engine"                  : { "Ref" : "Engine" },
+        "NumCacheNodes"           : { "Ref" : "NumCacheNodes" }
+      }
+    }
+  },
+  "Outputs" : {
+  }
+}

@@ -1,0 +1,387 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Single EC2 Instance with static IP - Infrastructure",
+  "Parameters": {
+    "Vpc": {
+      "Type": "String",
+      "Description": "ID of the VPC in which to place the instance"
+    },
+    "SubnetId": {
+      "Type": "String",
+      "Description": "ID of the subnet in which to place the instance"
+    },
+    "ImageId": {
+      "Type": "String",
+      "Description": "The ID of the image to launch",
+      "Default": "ami-id?"
+    },
+    "KeyPairName": {
+      "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+      "Type": "String",
+      "MinLength": "1",
+      "MaxLength": "255",
+      "AllowedPattern": "[\\x20-\\x7E]*",
+      "ConstraintDescription": "can contain only ASCII characters."
+    },
+    "PrimaryIPAddress": {
+      "Type": "String",
+      "Description": "Primary private IP. This must be a valid IP address for the subnet"
+    },
+    "InstanceType": {
+      "Description": "EC2 instance type",
+      "Type": "String"
+    },
+    "Volume2Size": {
+      "Description": "Size of volume to attached to instance",
+      "Type": "String",
+      "Default": "0"
+    },
+    "Volume2Type": {
+      "Description": "Type of volume to attach to instance",
+      "Type": "String",
+      "Default": "gp2"
+    },
+    "Volume2Encrypted": {
+      "Description": "Indicates whether the volume is encrypted",
+      "Type": "String",
+      "Default": "true"
+    },
+    "Volume2AZ": {
+      "Description": "Availability zone for the volume",
+      "Type": "String",
+      "Default": "us-east-1b"
+    },
+    "Volume3Size": {
+      "Description": "Size of volume to attached to instance",
+      "Type": "String",
+      "Default": "0"
+    },
+    "Volume3Type": {
+      "Description": "Type of volume to attach to instance",
+      "Type": "String",
+      "Default": "gp2"
+    },
+    "Volume3Encrypted": {
+      "Description": "Indicates whether the volume is encrypted",
+      "Type": "String",
+      "Default": "true"
+    },
+    "Volume3AZ": {
+      "Description": "Availability zone for the volume",
+      "Type": "String",
+      "Default": "us-east-1b"
+    },
+    "Volume4Size": {
+      "Description": "Size of volume to attached to instance",
+      "Type": "String",
+      "Default": "0"
+    },
+    "Volume4Type": {
+      "Description": "Type of volume to attach to instance",
+      "Type": "String",
+      "Default": "gp2"
+    },
+    "Volume4Encrypted": {
+      "Description": "Indicates whether the volume is encrypted",
+      "Type": "String",
+      "Default": "true"
+    },
+    "Volume4AZ": {
+      "Description": "Availability zone for the volume",
+      "Type": "String",
+      "Default": "us-east-1b"
+    },
+    "WebServerPort": {
+      "Description": "TCP/IP port of the web server port 80",
+      "Type": "String",
+      "Default": "80"
+    },
+    "WebServerPort443": {
+      "Description": "TCP/IP port of the web server port 443",
+      "Type": "String",
+      "Default": "443"
+    },
+    "SSHSG1": {
+      "Description": "Security Group for incoming ssh",
+      "Type": "String",
+      "Default": "sg-id?"
+    },
+    "SSHSG2": {
+      "Description": "Security Group for incoming ssh",
+      "Type": "String",
+      "Default": "sg-is?"
+    },
+    "IamInstanceProfile": {
+      "Description": "The physical ID of an instance profile or a reference to an InstanceProfile resource.",
+      "Type": "String"
+    }
+  },
+  "Mappings": {},
+  "Conditions": {
+    "CreateVolume2": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "Volume2Size"
+            },
+            "0"
+          ]
+        }
+      ]
+    },
+    "CreateVolume3": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "Volume3Size"
+            },
+            "0"
+          ]
+        }
+      ]
+    },
+    "CreateVolume4": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "Volume4Size"
+            },
+            "0"
+          ]
+        }
+      ]
+    }
+  },
+  "Resources": {
+    "ApplicationInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId": {
+          "Ref": "ImageId"
+        },
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "KeyName": {
+          "Ref": "KeyPairName"
+        },
+        "IamInstanceProfile": {
+          "Ref": "IamInstanceProfile"
+        },
+        "NetworkInterfaces": [
+          {
+            "NetworkInterfaceId": {
+              "Ref": "Eth0"
+            },
+            "DeviceIndex": "0"
+          }
+        ]
+      }
+    },
+    "Volume2": {
+      "Type": "AWS::EC2::Volume",
+      "Condition": "CreateVolume2",
+      "Properties": {
+        "Size": {
+          "Ref": "Volume2Size"
+        },
+        "AvailabilityZone": {
+          "Ref": "Volume2AZ"
+        },
+        "Encrypted": {
+          "Ref": "Volume2Encrypted"
+        },
+        "VolumeType": {
+          "Ref": "Volume2Type"
+        }
+      }
+    },
+    "MountPoint2": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Condition": "CreateVolume2",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "ApplicationInstance"
+        },
+        "VolumeId": {
+          "Ref": "Volume2"
+        },
+        "Device": "/dev/xvdf"
+      }
+    },
+    "Volume3": {
+      "Type": "AWS::EC2::Volume",
+      "Condition": "CreateVolume3",
+      "Properties": {
+        "Size": {
+          "Ref": "Volume3Size"
+        },
+        "AvailabilityZone": {
+          "Ref": "Volume3AZ"
+        },
+        "Encrypted": {
+          "Ref": "Volume3Encrypted"
+        },
+        "VolumeType": {
+          "Ref": "Volume3Type"
+        }
+      }
+    },
+    "MountPoint3": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Condition": "CreateVolume3",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "ApplicationInstance"
+        },
+        "VolumeId": {
+          "Ref": "Volume3"
+        },
+        "Device": "/dev/xvdg"
+      }
+    },
+    "Volume4": {
+      "Type": "AWS::EC2::Volume",
+      "Condition": "CreateVolume4",
+      "Properties": {
+        "Size": {
+          "Ref": "Volume4Size"
+        },
+        "AvailabilityZone": {
+          "Ref": "Volume4AZ"
+        },
+        "Encrypted": {
+          "Ref": "Volume4Encrypted"
+        },
+        "VolumeType": {
+          "Ref": "Volume4Type"
+        }
+      }
+    },
+    "MountPoint4": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Condition": "CreateVolume4",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "ApplicationInstance"
+        },
+        "VolumeId": {
+          "Ref": "Volume4"
+        },
+        "Device": "/dev/xvdh"
+      }
+    },
+    "Eth0": {
+      "Type": "AWS::EC2::NetworkInterface",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "SubnetId"
+        },
+        "PrivateIpAddress": {
+          "Ref": "PrimaryIPAddress"
+        },
+        "GroupSet": [
+          {
+            "Ref": "ApplicationSecurityGroup"
+          }
+        ]
+      }
+    },
+    "ApplicationSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Enable HTTP access on the configured port",
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": {
+              "Ref": "WebServerPort"
+            },
+            "ToPort": {
+              "Ref": "WebServerPort"
+            },
+            "CidrIp": "3.0.0.0/8"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": {
+              "Ref": "WebServerPort"
+            },
+            "ToPort": {
+              "Ref": "WebServerPort"
+            },
+            "CidrIp": "10.0.0.0/8"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": {
+              "Ref": "WebServerPort443"
+            },
+            "ToPort": {
+              "Ref": "WebServerPort443"
+            },
+            "CidrIp": "3.0.0.0/8"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": {
+              "Ref": "WebServerPort443"
+            },
+            "ToPort": {
+              "Ref": "WebServerPort443"
+            },
+            "CidrIp": "10.0.0.0/8"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "SourceSecurityGroupId": {
+              "Ref": "SSHSG1"
+            }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "SourceSecurityGroupId": {
+              "Ref": "SSHSG2"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "InstanceId": {
+      "Value": {
+        "Ref": "ApplicationInstance"
+      },
+      "Description": "Instance Id of newly created instance"
+    },
+    "PrimaryPrivateIPAddress": {
+      "Value": {
+        "Fn::GetAtt": [
+          "Eth0",
+          "PrimaryPrivateIpAddress"
+        ]
+      },
+      "Description": "Primary private IP address of Eth0"
+    },
+    "ApplicationStackSecurityGroup": {
+      "Value": {
+        "Fn::GetAtt": [
+          "ApplicationSecurityGroup",
+          "GroupId"
+        ]
+      },
+      "Description": "Security group for this application stack"
+    }
+  }
+}

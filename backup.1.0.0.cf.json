@@ -1,0 +1,174 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  
+  "Description" : "AWS Backup Stack",
+  
+  "Parameters" : {
+      "AmiId": {
+            "Description": "AMI",
+            "Type": "String",
+            "Default": "ami-id"
+        },
+        "InstanceType": {
+            "Description": "size for backup instance",
+            "Type": "String",
+            "Default": "m1.large"
+        },
+        "SSHLocation": {
+            "Description": "ssh origin",
+            "Type": "String",
+            "Default": "0.0.0.0/0"
+        },
+        "KeyName": {
+            "Description": "key for backup instance",
+            "Type": "String",
+            "Default": "somekeypair"
+        },
+        "VpcId": {
+            "Description": "ID of the VPC to create the ha-vip in",
+            "Type": "String",
+            "Default": "vpc-?"
+        },
+        "VpcSubnetIds": {
+            "Description": "Comma-delimited list of VPC subnet IDs (must match to azs)",
+            "Type": "CommaDelimitedList",
+            "Default": "subnet-?, subnet-?"
+        },
+        "VpcAzs": {
+            "Description": "AZs to create group in (must match to subnets)",
+            "Type": "CommaDelimitedList",
+            "Default": "us-east-1?, us-east-1?"
+        },
+        "EnvTag": {
+            "Description": "ENV",
+            "Type": "String",
+            "Default": "prod"
+        },
+        "BusinessUnitPrefix": {
+            "Description": "Prefix with Business Unit",
+            "Type": "String",
+            "Default": "ge"
+        },
+        "BucketName": {
+            "Description": "Name of S3 Bucket (global unique, full)",
+            "Type": "String",
+            "Default": "unit-aws-somebucket-vip"
+        },
+        "BUUSERARN": {
+            "Description": "ARN for BU-User (create if field empty)",
+            "Type": "String",
+            "Default": "arn:aws:iam::{account#}:user/{username}"
+        },
+        "BUSUPERUSERARN": {
+            "Description": "ARN for BU-Super (create if field empty)",
+            "Type": "String",
+            "Default": "arn:aws:iam::{account#}:user/{username}"
+        }
+
+    
+  },
+  "Conditions": {
+    "MakeBUUser" : { "Fn::Equals":  [ { "Ref": "BUUSERARN" }, "" ] },
+    "MakeBUSuperUser" : { "Fn::Equals":  [ { "Ref": "BUSUPERUSERARN" }, "" ] }
+  },
+    
+  "Resources" : {    
+
+    
+    "AWSBACKUPGroup" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "AvailabilityZones" : [ { "Fn::Select": [ "0", { "Ref": "VpcAzs" } ] }, { "Fn::Select": [ "1", { "Ref": "VpcAzs" } ] } ],
+        "LaunchConfigurationName" : { "Ref" : "AWSBACKUPConfig" },
+        "MinSize" : "1",
+        "MaxSize" : "1",
+        "VPCZoneIdentifier" : [ { "Fn::Select": [ "0", { "Ref": "VpcSubnetIds" } ] }, { "Fn::Select": [ "1", { "Ref": "VpcSubnetIds" } ] } ],
+        "Tags" : [ { "Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref": "BusinessUnitPrefix"}, {"Ref": "EnvTag"}, "ha-vip" ] ] }, "PropagateAtLaunch" : "true" } ]
+      }
+    },
+
+    "AWSBACKUPConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Properties" : {
+        "KeyName" : { "Ref" : "KeyName" },
+        "ImageId" : { "Ref" : "AmiId"},
+        "UserData": { "Fn::Base64" : { "Fn::Join" : ["", [
+          "#!/bin/bash -v", "\n",
+          "echo 'bootstrap script to associate eip!' > /root/todo", "\n",
+          "yum install -y backup", "\n"
+        ]]}},
+        "SecurityGroups" : [ { "Ref" : "InstanceSecurityGroup" } ],
+        "InstanceType" : { "Ref" : "InstanceType" }
+      }
+    },
+
+
+    "S3Bucket" : {
+       "Type" : "AWS::S3::Bucket",
+       "Properties" : {
+          "AccessControl" : "Private",
+          "BucketName" : { "Ref" : "BucketName" },
+          "Tags" : [ { "Key" : "Name", "Value" : { "Fn::Join" : [ "-", [ {"Ref": "BusinessUnitPrefix"}, {"Ref": "EnvTag"}, "ha-vip" ] ] } } ]
+      }
+    },
+
+    "buuser": {
+        "Type": "AWS::IAM::User",
+        "Condition" : "MakeBUUser",
+        "Properties": {
+            "Path": "/"
+        }
+    },
+
+    "busuperuser": {
+        "Type": "AWS::IAM::User",
+        "Condition" : "MakeBUSuperUser",
+        "Properties": {
+            "Path": "/"
+        }
+    },
+
+    "BucketPolicyUsers" : {
+        "Type" : "AWS::S3::BucketPolicy",
+        "Properties" : {
+            "PolicyDocument": {
+                "Statement"    : [{
+                    "Action"     : ["s3:ListBucket"],
+                    "Effect"     : "Allow",
+                    "Resource"   : { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "S3Bucket" }]]},
+                    "Principal"  : { "Fn::If": [ "MakeBUUser", { "AWS": {"Fn::GetAtt" : ["buuser", "Arn"]} }, { "AWS": {"Ref" : "BUUSERARN"} }] }   
+                },
+                {
+                    "Action"     : ["s3:PutObject"],
+                    "Effect"     : "Allow",
+                    "Resource"   : { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "S3Bucket" }, "/*"]]},
+                    "Principal"  : { "Fn::If": [ "MakeBUSuperUser", { "AWS": {"Fn::GetAtt" : ["busuperuser", "Arn"]} }, { "AWS": {"Ref" : "BUSUPERUSERARN"} }] }
+                }
+                ]
+            },
+            "Bucket" : { "Ref" : "S3Bucket" }
+        }
+    },
+
+      "InstanceSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable SSH access (direct) and 80 from world",
+        "VpcId" : { "Ref" : "VpcId"},
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : { "Ref" : "SSHLocation"}
+        },
+        {
+          "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    }
+       
+  }
+}

@@ -1,0 +1,411 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Base infrastructure for CF",
+  "Parameters": {
+    "Vpc": {
+      "Type": "String",
+      "Description": "ID of the VPC in which to place the instance"
+    },
+    "CFSubnetCidr": {
+      "Type": "String",
+      "Description": "Cidr of the CF subnet"
+    },
+    "CFSubnet2Cidr": {
+      "Type": "String",
+      "Description": "Cidr of the Second CF subnet"
+    },
+    "CFSubnetAZ": {
+      "Type": "String",
+      "Description": "AZ of the CF subnet"
+    },
+    "CFSubnet2AZ": {
+      "Type": "String",
+      "Description": "AZ of the second CF subnet"
+    },
+    "CFRouteTableID": {
+      "Type": "String",
+      "Description": "ID of the Route Table for the CF Subnet"
+    },
+    "CFNetworkACLEntryCidr": {
+      "Type": "String",
+      "Description": "Cidr block for the NACL Entry"
+    },
+    "DBEngine": {
+      "Type": "String",
+      "Description": "Engine for the DB"
+    },
+    "DBEngineVersion": {
+      "Type": "String",
+      "Description": "Engine Version for the DB"
+    },
+    "DBUser": {
+      "Type": "String",
+      "Description": "Master username for PostgreSQL"
+    },
+    "DBPass": {
+      "Type": "String",
+      "Description": "Master password for PostgreSQL"
+    },
+    "DBInstanceClass": {
+      "Type": "String",
+      "Description": "Instance class of the DB"
+    },
+    "DBVPCSecurityGroup": {
+      "Type": "String",
+      "Description": "VPC Security group of the DB"
+    },
+    "DBSubnetGroup": {
+      "Type": "String",
+      "Description": "Subnet group of the DB"
+    },
+    "DBPort": {
+      "Type": "String",
+      "Description": "Port for the DB"
+    },
+    "ELBSecurityGroup": {
+      "Type": "String",
+      "Description": "Security group for the ELB"
+    }
+  },
+  "Mappings": {},
+  "Resources": {
+    "CFSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "CidrBlock": {
+          "Ref": "CFSubnetCidr"
+        },
+        "AvailabilityZone": {
+          "Ref": "CFSubnetAZ"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  "cf",
+                  {
+                    "Ref": "CFSubnetAZ"
+                  }
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "CFSubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "CidrBlock": {
+          "Ref": "CFSubnet2Cidr"
+        },
+        "AvailabilityZone": {
+          "Ref": "CFSubnet2AZ"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  "cf",
+                  {
+                    "Ref": "CFSubnet2AZ"
+                  }
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "CFSubnetRouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "CFSubnet2"
+        },
+        "RouteTableId": {
+          "Ref": "CFRouteTableID"
+        }
+      }
+    },
+    "CFNetworkACL": {
+      "Type": "AWS::EC2::NetworkAcl",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "CF.nacl"
+          }
+        ]
+      }
+    },
+    "CFNetworkACLEntry22": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "CFNetworkACL"
+        },
+        "RuleNumber": "100",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "Protocol": "6",
+        "CidrBlock": {
+          "Ref": "CFNetworkACLEntryCidr"
+        },
+        "PortRange": {
+          "From": "22",
+          "To": "22"
+        }
+      }
+    },
+    "CFNetworkACLEntry80": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "CFNetworkACL"
+        },
+        "RuleNumber": "200",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "Protocol": "6",
+        "CidrBlock": {
+          "Ref": "CFNetworkACLEntryCidr"
+        },
+        "PortRange": {
+          "From": "80",
+          "To": "80"
+        }
+      }
+    },
+    "CFNetworkACLEntry443": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "CFNetworkACL"
+        },
+        "RuleNumber": "300",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "Protocol": "6",
+        "CidrBlock": {
+          "Ref": "CFNetworkACLEntryCidr"
+        },
+        "PortRange": {
+          "From": "443",
+          "To": "443"
+        }
+      }
+    },
+    "CFNetworkACLEntry4443": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "CFNetworkACL"
+        },
+        "RuleNumber": "400",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "Protocol": "6",
+        "CidrBlock": {
+          "Ref": "CFNetworkACLEntryCidr"
+        },
+        "PortRange": {
+          "From": "4443",
+          "To": "4443"
+        }
+      }
+    },
+    "CFNetworkACLEntry4222": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "CFNetworkACL"
+        },
+        "RuleNumber": "500",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "Protocol": "6",
+        "CidrBlock": {
+          "Ref": "CFNetworkACLEntryCidr"
+        },
+        "PortRange": {
+          "From": "4222",
+          "To": "4222"
+        }
+      }
+    },
+    "CFNetworkACLEntryEphemeral": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "CFNetworkACL"
+        },
+        "RuleNumber": "1000",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "Protocol": "6",
+        "CidrBlock": "0.0.0.0/0",
+        "PortRange": {
+          "From": "32769",
+          "To": "65535"
+        }
+      }
+    },
+    "CFNetworkACLEntryOutboundAll": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "CFNetworkACL"
+        },
+        "RuleNumber": "1100",
+        "RuleAction": "allow",
+        "Egress": "true",
+        "Protocol": "6",
+        "CidrBlock": "0.0.0.0/0",
+        "PortRange": {
+          "From": "0",
+          "To": "65535"
+        }
+      }
+    },
+    "CFSubnetNetworkACLAssociation": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "CFSubnet"
+        },
+        "NetworkAclId": {
+          "Ref": "CFNetworkACL"
+        }
+      }
+    },
+    "CFSubnetNetworkACLAssociation2": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "CFSubnet2"
+        },
+        "NetworkAclId": {
+          "Ref": "CFNetworkACL"
+        }
+      }
+    },
+    "ElasticLoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "LoadBalancerName": "cfrouter",
+        "SecurityGroups": [
+          {
+            "Ref": "ELBSecurityGroup"
+          }
+        ],
+        "Subnets": [
+          {
+            "Ref": "CFSubnet"
+          }
+        ],
+        "ConnectionDrainingPolicy": {
+          "Enabled": "true",
+          "Timeout": "300"
+        },
+        "Listeners": [
+          {
+            "LoadBalancerPort": "80",
+            "InstancePort": "80",
+            "Protocol": "HTTP"
+          }
+        ]
+      }
+    },
+    "RDSUUADB": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "DBName": "uuadb",
+        "DBInstanceIdentifier": "cfdbuuadb",
+        "AllocatedStorage": "5",
+        "DBInstanceClass": {
+          "Ref": "DBInstanceClass"
+        },
+        "Engine": {
+          "Ref": "DBEngine"
+        },
+        "EngineVersion": {
+          "Ref": "DBEngineVersion"
+        },
+        "MasterUsername": {
+          "Ref": "DBUser"
+        },
+        "MasterUserPassword": {
+          "Ref": "DBPass"
+        },
+        "AvailabilityZone": {
+          "Ref": "CFSubnetAZ"
+        },
+        "Port": {
+          "Ref": "DBPort"
+        },
+        "VPCSecurityGroups": [
+          {
+            "Ref": "DBVPCSecurityGroup"
+          }
+        ],
+        "DBSubnetGroupName": {
+          "Ref": "DBSubnetGroup"
+        }
+      }
+    },
+    "RDSCCDB": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "DBName": "ccdb",
+        "DBInstanceIdentifier": "cfdbccdb",
+        "AllocatedStorage": "5",
+        "DBInstanceClass": {
+          "Ref": "DBInstanceClass"
+        },
+        "Engine": {
+          "Ref": "DBEngine"
+        },
+        "EngineVersion": {
+          "Ref": "DBEngineVersion"
+        },
+        "MasterUsername": {
+          "Ref": "DBUser"
+        },
+        "MasterUserPassword": {
+          "Ref": "DBPass"
+        },
+        "AvailabilityZone": {
+          "Ref": "CFSubnetAZ"
+        },
+        "Port": {
+          "Ref": "DBPort"
+        },
+        "VPCSecurityGroups": [
+          {
+            "Ref": "DBVPCSecurityGroup"
+          }
+        ],
+        "DBSubnetGroupName": {
+          "Ref": "DBSubnetGroup"
+        }
+      }
+    }
+  },
+  "Outputs": {}
+}

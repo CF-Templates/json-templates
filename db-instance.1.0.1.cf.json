@@ -1,0 +1,495 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Single EC2 Instance with static IP - Infrastructure",
+  "Parameters": {
+    "Vpc": {
+      "Type": "String",
+      "Description": "ID of the VPC in which to place the instance"
+    },
+    "SubnetId": {
+      "Type": "String",
+      "Description": "ID of the subnet in which to place the instance"
+    },
+    "ImageId": {
+      "Type": "String",
+      "Description": "The ID of the image to launch"
+    },
+    "KeyPairName": {
+      "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+      "Type": "String",
+      "MinLength": "1",
+      "MaxLength": "255",
+      "AllowedPattern": "[\\x20-\\x7E]*",
+      "ConstraintDescription": "can contain only ASCII characters."
+    },
+    "PrimaryIPAddress": {
+      "Type": "String",
+      "Description": "Primary private IP. This must be a valid IP address for the subnet"
+    },
+    "InstanceType": {
+      "Description": "EC2 instance type",
+      "Type": "String"
+    },
+    "Volume2Size": {
+      "Description": "Size of volume to attached to instance",
+      "Type": "String",
+      "Default": "0"
+    },
+    "Volume2Type": {
+      "Description": "Type of volume to attach to instance",
+      "Type": "String",
+      "Default": "gp2"
+    },
+    "Volume2Encrypted": {
+      "Description": "Indicates whether the volume is encrypted",
+      "Type": "String",
+      "Default": "true"
+    },
+    "Volume3Size": {
+      "Description": "Size of volume to attached to instance",
+      "Type": "String",
+      "Default": "0"
+    },
+    "Volume3Type": {
+      "Description": "Type of volume to attach to instance",
+      "Type": "String",
+      "Default": "gp2"
+    },
+    "Volume3Encrypted": {
+      "Description": "Indicates whether the volume is encrypted",
+      "Type": "String",
+      "Default": "true"
+    },
+    "Volume4Size": {
+      "Description": "Size of volume to attached to instance",
+      "Type": "String",
+      "Default": "0"
+    },
+    "Volume4Type": {
+      "Description": "Type of volume to attach to instance",
+      "Type": "String",
+      "Default": "gp2"
+    },
+    "Volume4Encrypted": {
+      "Description": "Indicates whether the volume is encrypted",
+      "Type": "String",
+      "Default": "true"
+    },
+    "DatabasePort": {
+      "Description": "TCP/IP port of the database",
+      "Type": "String"
+    },
+    "HealthCheck": {
+        "Description": "Health Check - just port 80 by default",
+        "Type": "String",
+        "Default": "HTTP:80/"
+    },
+    "SNSTopicARN": {
+        "Description": "SNS Topic to send alerts to",
+        "Type": "String",
+        "Default": "255"
+    },
+    "SSHSG1": {
+      "Description": "Security Group for incoming ssh",
+      "Type": "String",
+      "Default": "sg-?"
+    },
+    "SSHSG2": {
+      "Description": "Security Group for incoming ssh",
+      "Type": "String",
+      "Default": "sg-?"
+    },
+    "IamInstanceProfile": {
+      "Description": "The physical ID of an instance profile or a reference to an InstanceProfile resource.",
+      "Type": "String"
+    }
+  },
+  "Mappings": {},
+  "Conditions": {
+    "CreateVolume2": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "Volume2Size"
+            },
+            "0"
+          ]
+        }
+      ]
+    },
+    "CreateVolume3": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "Volume3Size"
+            },
+            "0"
+          ]
+        }
+      ]
+    },
+    "CreateVolume4": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "Volume4Size"
+            },
+            "0"
+          ]
+        }
+      ]
+    }
+  },
+  "Resources": {
+    "ApplicationInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId": {
+          "Ref": "ImageId"
+        },
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "KeyName": {
+          "Ref": "KeyPairName"
+        },
+        "IamInstanceProfile": {
+          "Ref": "IamInstanceProfile"
+        },
+        "NetworkInterfaces": [
+          {
+            "NetworkInterfaceId": {
+              "Ref": "Eth0"
+            },
+            "DeviceIndex": "0"
+          }
+        ]
+      }
+    },
+    "Volume2": {
+      "Type": "AWS::EC2::Volume",
+      "Condition": "CreateVolume2",
+      "Properties": {
+        "Size": {
+          "Ref": "Volume2Size"
+        },
+        "AvailabilityZone": "us-east-1b",
+        "Encrypted": {
+          "Ref": "Volume2Encrypted"
+        },
+        "VolumeType": {
+          "Ref": "Volume2Type"
+        }
+      }
+    },
+    "MountPoint2": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Condition": "CreateVolume2",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "ApplicationInstance"
+        },
+        "VolumeId": {
+          "Ref": "Volume2"
+        },
+        "Device": "/dev/xvdf"
+      }
+    },
+    "Volume3": {
+      "Type": "AWS::EC2::Volume",
+      "Condition": "CreateVolume3",
+      "Properties": {
+        "Size": {
+          "Ref": "Volume3Size"
+        },
+        "AvailabilityZone": "us-east-?",
+        "Encrypted": {
+          "Ref": "Volume3Encrypted"
+        },
+        "VolumeType": {
+          "Ref": "Volume3Type"
+        }
+      }
+    },
+    "MountPoint3": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Condition": "CreateVolume3",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "ApplicationInstance"
+        },
+        "VolumeId": {
+          "Ref": "Volume3"
+        },
+        "Device": "/dev/xvdg"
+      }
+    },
+    "Volume4": {
+      "Type": "AWS::EC2::Volume",
+      "Condition": "CreateVolume4",
+      "Properties": {
+        "Size": {
+          "Ref": "Volume4Size"
+        },
+        "AvailabilityZone": "us-east-?",
+        "Encrypted": {
+          "Ref": "Volume4Encrypted"
+        },
+        "VolumeType": {
+          "Ref": "Volume4Type"
+        }
+      }
+    },
+    "MountPoint4": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Condition": "CreateVolume4",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "ApplicationInstance"
+        },
+        "VolumeId": {
+          "Ref": "Volume4"
+        },
+        "Device": "/dev/xvdh"
+      }
+    },
+    "Eth0": {
+      "Type": "AWS::EC2::NetworkInterface",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "SubnetId"
+        },
+        "PrivateIpAddress": {
+          "Ref": "PrimaryIPAddress"
+        },
+        "GroupSet": [
+          {
+            "Ref": "ApplicationSecurityGroup"
+          }
+        ]
+      }
+    },
+    "ApplicationSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Enable HTTP access on the configured port",
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": {
+              "Ref": "DatabasePort"
+            },
+            "ToPort": {
+              "Ref": "DatabasePort"
+            },
+            "CidrIp": "subnet-ip/24"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": {
+              "Ref": "DatabasePort"
+            },
+            "ToPort": {
+              "Ref": "DatabasePort"
+            },
+            "CidrIp": "subnet-ip/24"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": {
+              "Ref": "DatabasePort"
+            },
+            "ToPort": {
+              "Ref": "DatabasePort"
+            },
+            "CidrIp": "subnet-ip/24"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "SourceSecurityGroupId": {
+              "Ref": "SSHSG1"
+            }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "SourceSecurityGroupId": {
+              "Ref": "SSHSG2"
+            }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "3389",
+            "ToPort": "3389",
+            "SourceSecurityGroupId": {
+              "Ref": "SSHSG1"
+            }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "3389",
+            "ToPort": "3389",
+            "SourceSecurityGroupId": {
+              "Ref": "SSHSG2"
+            }
+          }
+        ]
+      }
+    },
+    "CPUAlarmHigh": {
+        "Type": "AWS::CloudWatch::Alarm",
+        "Properties": {
+            "AlarmDescription": "Alarm if CPU too high or metric disappears indicating instance is down",
+            "AlarmActions": [
+                {
+                    "Ref": "SNSTopicARN"
+                }
+            ],
+            "InsufficientDataActions": [
+                {
+                    "Ref": "SNSTopicARN"
+                }
+            ],
+            "MetricName": "CPUUtilization",
+            "Namespace": "AWS/EC2",
+            "Statistic": "Average",
+            "Period": "300",
+            "EvaluationPeriods": "2",
+            "Threshold": "90",
+            "ComparisonOperator": "GreaterThanThreshold",
+            "Dimensions": [
+                {
+                    "Name": "InstanceId",
+                    "Value": {
+                        "Ref": "ApplicationInstance"
+                    }
+                }
+            ]
+        }
+    },
+    "TooManyUnhealthyHostsAlarm": {
+        "Type": "AWS::CloudWatch::Alarm",
+        "Properties": {
+            "AlarmDescription": "Alarm if there are any unhealthy hosts.",
+            "Namespace": "AWS/ELB",
+            "MetricName": "UnHealthyHostCount",
+            "Statistic": "Average",
+            "Dimensions": [
+                {
+                    "Name": "LoadBalancerName",
+                    "Value": {
+                        "Ref": "MonitoringLoadBalancer"
+                    }
+                }
+            ],
+            "Period": "300",
+            "EvaluationPeriods": "1",
+            "Threshold": "0",
+            "ComparisonOperator": "GreaterThanThreshold",
+            "AlarmActions": [
+                {
+                    "Ref": "SNSTopicARN"
+                }
+            ]
+        }
+    },
+    "RequestLatencyAlarmHigh": {
+        "Type": "AWS::CloudWatch::Alarm",
+        "Properties": {
+            "AlarmDescription": "Alarm if request latency > ",
+            "Namespace": "AWS/ELB",
+            "MetricName": "Latency",
+            "Dimensions": [
+                {
+                    "Name": "LoadBalancerName",
+                    "Value": {
+                        "Ref": "MonitoringLoadBalancer"
+                    }
+                }
+            ],
+            "Statistic": "Average",
+            "Period": "300",
+            "EvaluationPeriods": "1",
+            "Threshold": "1",
+            "ComparisonOperator": "GreaterThanThreshold",
+            "AlarmActions": [
+                {
+                    "Ref": "SNSTopicARN"
+                }
+            ]
+        }
+    },
+    "MonitoringLoadBalancer": {
+        "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+        "Properties": {
+            "Subnets": [
+                {
+                    "Ref": "SubnetId"
+                }
+            ],
+            "Scheme": "internal",
+            "SecurityGroups": [
+                {
+                    "Ref": "ApplicationSecurityGroup"
+                }
+            ],
+            "Instances": [
+                {
+                    "Ref": "ApplicationInstance"
+                }
+            ],
+            "Listeners": [
+                {
+                    "LoadBalancerPort": "80",
+                    "InstancePort": "80",
+                    "Protocol": "HTTP"
+                }
+            ],
+            "HealthCheck": {
+                "Target": {
+                    "Ref": "HealthCheck"
+                },
+                "HealthyThreshold": "3",
+                "UnhealthyThreshold": "5",
+                "Interval": "30",
+                "Timeout": "5"
+            }
+        }
+    }
+  },
+  "Outputs": {
+    "InstanceId": {
+      "Value": {
+        "Ref": "ApplicationInstance"
+      },
+      "Description": "Instance Id of newly created instance"
+    },
+    "PrimaryPrivateIPAddress": {
+      "Value": {
+        "Fn::GetAtt": [
+          "Eth0",
+          "PrimaryPrivateIpAddress"
+        ]
+      },
+      "Description": "Primary private IP address of Eth0"
+    },
+    "ApplicationStackSecurityGroup": {
+      "Value": {
+        "Fn::GetAtt": [
+          "ApplicationSecurityGroup",
+          "GroupId"
+        ]
+      },
+      "Description": "Security group for this application stack"
+    }
+  }
+}

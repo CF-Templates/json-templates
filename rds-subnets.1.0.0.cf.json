@@ -1,0 +1,355 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Set of subnets and a subnet group for RDS instances.",
+  "Parameters": {
+    "Vpc": {
+      "Type": "String",
+      "Description": "ID of the VPC"
+    },
+    "RDSSubnet1Cidr": {
+      "Type": "String",
+      "Description": "RDS subnet 1 CIDR"
+    },
+    "RDSSubnet1AZ": {
+      "Type": "String",
+      "Description": "RDS subnet 1 AZ"
+    },
+    "RDSSubnet2Cidr": {
+      "Type": "String",
+      "Description": "RDS subnet 2 CIDR"
+    },
+    "RDSSubnet2AZ": {
+      "Type": "String",
+      "Description": "RDS subnet 2 AZ"
+    },
+    "RDSSubnet3Cidr": {
+      "Type": "String",
+      "Description": "RDS subnet 3 CIDR"
+    },
+    "RDSSubnet3AZ": {
+      "Type": "String",
+      "Description": "RDS subnet 3 AZ"
+    },
+    "RDSRouteTableID": {
+      "Type": "String",
+      "Description": "ID of the route table to use for the subnets"
+    },
+    "RDSNetworkACLIngressCIDR": {
+      "Type": "String",
+      "Description": "CIDR that is allowed ingress into the RDS subnets"
+    },
+    "RDSSubnetGroupName": {
+      "Type": "String",
+      "Description": "CIDR that is allowed ingress into the RDS subnets"
+    }
+  },
+  "Mappings": {},
+  "Resources": {
+    "RDSSubnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "CidrBlock": {
+          "Ref": "RDSSubnet1Cidr"
+        },
+        "AvailabilityZone": {
+          "Ref": "RDSSubnet1AZ"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  "rds",
+                  {
+                    "Ref": "RDSSubnet1AZ"
+                  }
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "RDSSubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "CidrBlock": {
+          "Ref": "RDSSubnet2Cidr"
+        },
+        "AvailabilityZone": {
+          "Ref": "RDSSubnet2AZ"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  "rds",
+                  {
+                    "Ref": "RDSSubnet2AZ"
+                  }
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "RDSSubnet3": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "CidrBlock": {
+          "Ref": "RDSSubnet3Cidr"
+        },
+        "AvailabilityZone": {
+          "Ref": "RDSSubnet3AZ"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "-",
+                [
+                  "rds",
+                  {
+                    "Ref": "RDSSubnet3AZ"
+                  }
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "RDSSubnet1RouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "RDSSubnet1"
+        },
+        "RouteTableId": {
+          "Ref": "RDSRouteTableID"
+        }
+      }
+    },
+    "RDSSubnet2RouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "RDSSubnet2"
+        },
+        "RouteTableId": {
+          "Ref": "RDSRouteTableID"
+        }
+      }
+    },
+    "RDSSubnet3RouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "RDSSubnet3"
+        },
+        "RouteTableId": {
+          "Ref": "RDSRouteTableID"
+        }
+      }
+    },
+    "RDSNetworkACL": {
+      "Type": "AWS::EC2::NetworkAcl",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "rds.nacl"
+          }
+        ]
+      }
+    },
+    "NetworkACLEntryMYSQL": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "RDSNetworkACL"
+        },
+        "RuleNumber": "100",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "Protocol": "6",
+        "CidrBlock": {
+          "Ref": "RDSNetworkACLIngressCIDR"
+        },
+        "PortRange": {
+          "From": "3306",
+          "To": "3306"
+        }
+      }
+    },
+    "NetworkACLEntryOracle": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "RDSNetworkACL"
+        },
+        "RuleNumber": "200",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "Protocol": "6",
+        "CidrBlock": {
+          "Ref": "RDSNetworkACLIngressCIDR"
+        },
+        "PortRange": {
+          "From": "1521",
+          "To": "1521"
+        }
+      }
+    },
+    "NetworkACLEntrySQLServer": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "RDSNetworkACL"
+        },
+        "RuleNumber": "300",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "Protocol": "6",
+        "CidrBlock": {
+          "Ref": "RDSNetworkACLIngressCIDR"
+        },
+        "PortRange": {
+          "From": "1433",
+          "To": "1433"
+        }
+      }
+    },
+    "NetworkACLEntryPostgreSQL": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "RDSNetworkACL"
+        },
+        "RuleNumber": "400",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "Protocol": "6",
+        "CidrBlock": {
+          "Ref": "RDSNetworkACLIngressCIDR"
+        },
+        "PortRange": {
+          "From": "5432",
+          "To": "5432"
+        }
+      }
+    },
+    "NetworkACLIngressEphemeral": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "RDSNetworkACL"
+        },
+        "RuleNumber": "500",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "Protocol": "6",
+        "CidrBlock": "0.0.0.0/0",
+        "PortRange": {
+          "From": "32769",
+          "To": "65535"
+        }
+      }
+    },
+    "NetworkACLEgressEphemeral": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "RDSNetworkACL"
+        },
+        "RuleNumber": "1000",
+        "RuleAction": "allow",
+        "Egress": "true",
+        "Protocol": "6",
+        "CidrBlock": "0.0.0.0/0",
+        "PortRange": {
+          "From": "32768",
+          "To": "65535"
+        }
+      }
+    },
+    "RDSSubnet1NetworkACLAssociation": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "RDSSubnet1"
+        },
+        "NetworkAclId": {
+          "Ref": "RDSNetworkACL"
+        }
+      }
+    },
+    "RDSSubnet2NetworkACLAssociation": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "RDSSubnet2"
+        },
+        "NetworkAclId": {
+          "Ref": "RDSNetworkACL"
+        }
+      }
+    },
+    "RDSSubnet3NetworkACLAssociation": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "RDSSubnet3"
+        },
+        "NetworkAclId": {
+          "Ref": "RDSNetworkACL"
+        }
+      }
+    },
+    "RDSSubnetGroup": {
+      "Type": "AWS::RDS::DBSubnetGroup",
+      "Properties": {
+        "DBSubnetGroupDescription": "RDS subnet group",
+        "SubnetIds": [
+          {
+            "Ref": "RDSSubnet1"
+          },
+          {
+            "Ref": "RDSSubnet2"
+          },
+          {
+            "Ref": "RDSSubnet3"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Ref": "RDSSubnetGroupName"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {}
+}

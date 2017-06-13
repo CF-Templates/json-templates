@@ -1,0 +1,79 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Template for an elastic load balancer",
+  "Parameters": {
+    "Vpc": {
+      "Type": "String",
+      "Description": "ID of the VPC in which to place the instance"
+    },    
+    "ELBName": {
+      "Description": "ELB name",
+      "Type": "String"
+    },
+    "ELBSubnet": {
+      "Description": "ELB Subnet",
+      "Type": "List<AWS::EC2::Subnet::Id>"
+    },
+    "ELBPort": {
+      "Description": "ELB Listener Port",
+      "Type": "String"
+    },
+    "ELBInstancePort": {
+      "Description": "ELB Instance Port",
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "ElasticLoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "LoadBalancerName": {
+          "Ref": "ELBName"
+        },
+        "Subnets": {
+            "Ref": "ELBSubnet"
+        },
+        "SecurityGroups": [ 
+          {
+            "Ref": "ELBSecurityGroup"
+          } 
+        ],
+        "Scheme": "internal",
+        "Listeners": [
+          {
+            "LoadBalancerPort": {
+              "Ref": "ELBPort"
+            },
+            "InstancePort": {
+              "Ref": "ELBInstancePort"
+            },
+            "Protocol": "HTTP"
+          }
+        ]
+      }
+    },
+    "ELBSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable SSH access and HTTP access on the inbound port",
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "SecurityGroupIngress" : [ 
+          {
+            "IpProtocol" : "tcp",
+            "FromPort" : { "Ref": "ELBPort" },
+            "ToPort" : { "Ref": "ELBPort" },
+            "CidrIp" : "3.0.0.0/8"
+          },
+          {
+            "IpProtocol" : "tcp",
+            "FromPort" : { "Ref": "ELBPort" },
+            "ToPort" : { "Ref": "ELBPort" },
+            "CidrIp" : "vpc-ip/19"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,291 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "This template will build an RDS Instance. ",
+  "Parameters": {
+    "MyDbSubnetGroup": {
+      "Description": "Subnet Group",
+      "Type": "String"
+    },
+    "MultiAZ": {
+      "Description": "RDS MultiAZ",
+      "Type": "String"
+    },
+    "DBInstanceIdentifier": {
+      "Description": "DBInstanceIdentifier",
+      "Type": "String"
+    },
+    "DBName": {
+      "Description": "DBName",
+      "Type": "String"
+    },
+    "StorageEncrypted": {
+      "Description": "StorageEncrypted",
+      "Type": "String",
+      "Default": "false"
+    },
+    "Engine": {
+      "Description": "DatabaseType",
+      "Type": "String"
+    },
+    "LicenseModel": {
+      "Description": "The license model information for the DB instance",
+      "Type": "String",
+      "Default": "bring-your-own-license"
+    },
+    "MasterUsername": {
+      "Description": "MasterUsername",
+      "Type": "String"
+    },
+    "MasterUserPassword": {
+      "Description": "MasterUserPassword",
+      "Type": "String",
+      "NoEcho": "true",
+      "Default": "some-password"
+    },
+    "AllocatedStorage": {
+      "Description": "AllocatedStorage",
+      "Type": "String"
+    },
+    "StorageType": {
+      "Description": "StorageType",
+      "Type": "String",
+      "Default": "gp2"
+    },
+    "DBInstanceClass": {
+      "Description": "DBInstanceClass",
+      "Type": "String"
+    },
+    "VPCSecurityGroups": {
+      "Description": "VPCSecurityGroups",
+      "Type": "String"
+    },
+    "EngineVersion": {
+      "Description": "EngineVersion",
+      "Type": "String"
+    },
+    "BackupRetentionPeriod": {
+      "Description": "BackupRetentionPeriod",
+      "Type": "String",
+      "Default": "7"
+    },
+    "AutoMinorVersionUpgrade": {
+      "Description": "AutoMinorVersionUpgrade",
+      "Type": "String",
+      "Default": "false"
+    },
+    "AlarmTopic": {
+      "Description": "SNS topic to notify if there are operational issues",
+      "Type": "String"
+    }
+  },
+  "Mappings": {},
+  "Resources": {
+    "MyDB": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "AllocatedStorage": {
+          "Ref": "AllocatedStorage"
+        },
+        "AutoMinorVersionUpgrade": {
+          "Ref": "AutoMinorVersionUpgrade"
+        },
+        "BackupRetentionPeriod": {
+          "Ref": "BackupRetentionPeriod"
+        },
+        "PreferredBackupWindow": "03:00-03:30",
+        "PreferredMaintenanceWindow": "Mon:05:00-Mon:05:30",
+        "DBInstanceClass": {
+          "Ref": "DBInstanceClass"
+        },
+        "DBInstanceIdentifier": {
+          "Ref": "DBInstanceIdentifier"
+        },
+        "DBName": {
+          "Ref": "DBName"
+        },
+        "StorageEncrypted": {
+          "Ref": "StorageEncrypted"
+        },
+        "StorageType": {
+          "Ref": "StorageType"
+        },  
+        "DBSubnetGroupName": {
+          "Ref": "MyDbSubnetGroup"
+        },
+        "Engine": {
+          "Ref": "Engine"
+        },
+        "EngineVersion": {
+          "Ref": "EngineVersion"
+        },
+        "LicenseModel": {
+          "Ref": "LicenseModel"
+        },
+        "MasterUsername": {
+          "Ref": "MasterUsername"
+        },
+        "MasterUserPassword": {
+          "Ref": "MasterUserPassword"
+        },
+        "MultiAZ": {
+          "Ref": "MultiAZ"
+        },
+        "VPCSecurityGroups": [
+          {
+            "Ref": "VPCSecurityGroups"
+          }
+        ]
+      }
+    },
+    "CPUAlarmHigh": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmDescription": {
+          "Fn::Join": [
+            "",
+            [
+              "Alarm if ",
+              {
+                "Ref": "DBName"
+              },
+              " CPU > 90",
+              "% for 10 minutes"
+            ]
+          ]
+        },
+        "Namespace": "AWS/RDS",
+        "MetricName": "CPUUtilization",
+        "Statistic": "Average",
+        "Period": "300",
+        "Threshold": "90",
+        "ComparisonOperator": "GreaterThanThreshold",
+        "EvaluationPeriods": "2",
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopic"
+          }
+        ],
+        "Dimensions": [
+          {
+            "Name": "DBInstanceIdentifier",
+            "Value": {
+              "Ref": "MyDB"
+            }
+          }
+        ]
+      }
+    },
+    "FreeStorageSpace": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmDescription": {
+          "Fn::Join": [
+            "",
+            [
+              "Alarm if ",
+              {
+                "Ref": "DBName"
+              },
+              " storage space <= 1024 for 10 minutes"
+            ]
+          ]
+        },
+        "Namespace": "AWS/RDS",
+        "MetricName": "FreeStorageSpace",
+        "Statistic": "Average",
+        "Period": "300",
+        "Threshold": "1024",
+        "ComparisonOperator": "LessThanOrEqualToThreshold",
+        "EvaluationPeriods": "2",
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopic"
+          }
+        ],
+        "Dimensions": [
+          {
+            "Name": "DBInstanceIdentifier",
+            "Value": {
+              "Ref": "MyDB"
+            }
+          }
+        ]
+      }
+    },
+    "ReadIOPSHigh": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmDescription": {
+          "Fn::Join": [
+            "",
+            [
+              "Alarm if ",
+              {
+                "Ref": "DBName"
+              },
+              " ReadIOPs > 100 for 10 minutes"
+            ]
+          ]
+        },
+        "Namespace": "AWS/RDS",
+        "MetricName": "ReadIOPS",
+        "Statistic": "Average",
+        "Period": "300",
+        "Threshold": "100",
+        "ComparisonOperator": "GreaterThanThreshold",
+        "EvaluationPeriods": "2",
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopic"
+          }
+        ],
+        "Dimensions": [
+          {
+            "Name": "DBInstanceIdentifier",
+            "Value": {
+              "Ref": "MyDB"
+            }
+          }
+        ]
+      }
+    },
+    "WriteIOPSHigh": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmDescription": {
+          "Fn::Join": [
+            "",
+            [
+              "Alarm if ",
+              {
+                "Ref": "DBName"
+              },
+              " WriteIOPs > 300 for 10 minutes"
+            ]
+          ]
+        },
+        "Namespace": "AWS/RDS",
+        "MetricName": "WriteIOPS",
+        "Statistic": "Average",
+        "Period": "300",
+        "Threshold": "300",
+        "ComparisonOperator": "GreaterThanThreshold",
+        "EvaluationPeriods": "2",
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopic"
+          }
+        ],
+        "Dimensions": [
+          {
+            "Name": "DBInstanceIdentifier",
+            "Value": {
+              "Ref": "MyDB"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {}
+}

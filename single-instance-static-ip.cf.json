@@ -1,0 +1,148 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Single EC2 Instance with static IP - Infrastructure",
+  "Parameters": {
+    "Vpc": {
+      "Type": "String",
+      "Description": "ID of the VPC in which to place the instance"
+    },
+    "SubnetId": {
+      "Type": "String",
+      "Description": "ID of the subnet in which to place the instance"
+    },
+    "ImageId": {
+      "Type": "String",
+      "Description": "The ID of the image to launch"
+    },
+    "KeyPairName": {
+      "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+      "Type": "String",
+      "MinLength": "1",
+      "MaxLength": "255",
+      "AllowedPattern": "[\\x20-\\x7E]*",
+      "ConstraintDescription": "can contain only ASCII characters."
+    },
+    "PrimaryIPAddress": {
+      "Type": "String",
+      "Description": "Primary private IP. This must be a valid IP address for the subnet"
+    },
+    "InstanceType": {
+      "Description": "EC2 instance type",
+      "Type": "String",
+      "Default": "m1.small",
+      "AllowedValues": [
+        "t2.micro",
+        "t2.small",
+        "t2.medium",
+        "m1.small",
+        "m1.medium"
+      ],
+      "ConstraintDescription": "must be a valid EC2 instance type"
+    },
+    "WebServerPort": {
+      "Description": "TCP/IP port of the web server",
+      "Type": "String",
+      "Default": "80"
+    }
+  },
+  "Mappings": {},
+  "Resources": {
+    "ApplicationInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId": {
+          "Ref": "ImageId"
+        },
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "KeyName": {
+          "Ref": "KeyPairName"
+        },
+        "NetworkInterfaces": [
+          {
+            "NetworkInterfaceId": {
+              "Ref": "Eth0"
+            },
+            "DeviceIndex": "0"
+          }
+        ]
+      }
+    },
+    "Eth0": {
+      "Type": "AWS::EC2::NetworkInterface",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "SubnetId"
+        },
+        "PrivateIpAddress": {
+          "Ref": "PrimaryIPAddress"
+        },
+        "GroupSet": [
+          {
+            "Ref": "ApplicationSecurityGroup"
+          }
+        ]
+      }
+    },
+    "ApplicationSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Enable HTTP access on the configured port",
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": {
+              "Ref": "WebServerPort"
+            },
+            "ToPort": {
+              "Ref": "WebServerPort"
+            },
+            "CidrIp": "3.0.0.0/8"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "SourceSecurityGroupId": "sg-id?"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "SourceSecurityGroupId": "sg-id?"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "InstanceId": {
+      "Value": {
+        "Ref": "ApplicationInstance"
+      },
+      "Description": "Instance Id of newly created instance"
+    },
+    "PrimaryPrivateIPAddress": {
+      "Value": {
+        "Fn::GetAtt": [
+          "Eth0",
+          "PrimaryPrivateIpAddress"
+        ]
+      },
+      "Description": "Primary private IP address of Eth0"
+    },
+    "ApplicationStackSecurityGroup": {
+      "Value": {
+        "Fn::GetAtt": [
+          "ApplicationSecurityGroup",
+          "GroupId"
+        ]
+      },
+      "Description": "Security group for this application stack"
+    }
+  }
+}
